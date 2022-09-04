@@ -3,6 +3,7 @@ version: '3.1'
 services:
   mongo:
     image: mongo
+    container_name: daily-words-mongo
     restart: always
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
@@ -11,6 +12,7 @@ services:
       - 27017:27017
   mongo-express:
     image: mongo-express
+    container_name: daily-words-mongo-express
     restart: always
     ports:
       - 8081:8081
@@ -18,17 +20,15 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: password
       ME_CONFIG_MONGODB_URL: mongodb://root:password@mongo:27017/
-
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
+    container_name: daily-words-zookeeper
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-    networks:
-      collector_kafka:
-
   kafka:
     image: confluentinc/cp-kafka:latest
+    container_name: daily-words-kafka
     depends_on:
       - zookeeper
     ports:
@@ -40,11 +40,28 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    networks:
-      collector_kafka:
-
-networks:
-  collector_kafka:
-    driver: bridge
-    driver_opts:
-      com.docker.network.enable_ipv6: "true"
+  postgres:
+    image: postgres:14.1-alpine
+    container_name: dailywords-postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=resource
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres:/var/lib/postgresql/data
+  keycloak:
+    image: ghcr.io/thomasvitale/keycloak:17.0.0-amd64 # Use quay.io/keycloak:17.0.0-legacy on Intel processors
+    container_name: dailywords-keycloak
+    environment:
+      - KEYCLOAK_USER=user
+      - KEYCLOAK_PASSWORD=password
+    ports:
+      - "8080:8080"
+      # Uncomment the line below if you want to specify JDBC parameters. The parameter below is just an example, and it shouldn't be used in production without knowledge. It is highly recommended that you read the PostgreSQL JDBC driver documentation in order to use it.
+      #JDBC_PARAMS: "ssl=true"
+volumes:
+  postgres:
+    driver: local
