@@ -9,13 +9,15 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: password
     ports:
-      - 27017:27017
+      - "27017:27017"
   mongo-express:
+    depends_on:
+      - mongo
     image: mongo-express
     container_name: daily-words-mongo-express
     restart: always
     ports:
-      - 8081:8081
+      - "8081:8081"
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: password
@@ -32,7 +34,7 @@ services:
     depends_on:
       - zookeeper
     ports:
-      - 29092:29092
+      - "29092:29092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -40,28 +42,64 @@ services:
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  kafka-ui:
+    image: provectuslabs/kafka-ui
+    container_name: daily-words-kafka-ui
+    ports:
+      - "8083:8080"
+    restart: always
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:9092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=localhost:2181
+      - KAFKA_CLUSTERS_0_KAFKACONNECT_0_USERNAME=admin
+      - KAFKA_CLUSTERS_0_KAFKACONNECT_0_PASSWORD=password
+    depends_on:
+      - kafka
   postgres:
     image: postgres:14.1-alpine
-    container_name: dailywords-postgres
+    container_name: daily-words-postgres
     restart: always
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=resource
+      - POSTGRES_DB=daily-words-resource
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
-      - postgres:/var/lib/postgresql/data
-  keycloak:
-    image: ghcr.io/thomasvitale/keycloak:17.0.0-amd64 # Use quay.io/keycloak:17.0.0-legacy on Intel processors
-    container_name: dailywords-keycloak
+      - postgres
+  mysql:
+    image: mysql:5.7.38
+    platform: linux/arm64/v8
+    container_name: daily-words-mysql
+    ports:
+      - "3306:3306"
     environment:
-      - KEYCLOAK_USER=user
-      - KEYCLOAK_PASSWORD=password
+      - MYSQL_DATABASE=keycloak
+      - MYSQL_USER=keycloak
+      - MYSQL_PASSWORD=password
+      - MYSQL_ROOT_PASSWORD=root_password
+    healthcheck:
+      test: "mysqladmin ping -u root -p$${MYSQL_ROOT_PASSWORD}"
+  keycloak:
+    image: quay.io/keycloak/keycloak:18.0.2
+    platform: linux/arm64/v8
+    container_name: daily-words-keycloak
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=mysql
+      - KC_DB_URL_HOST=mysql
+      - KC_DB_URL_DATABASE=keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=password
     ports:
       - "8080:8080"
-      # Uncomment the line below if you want to specify JDBC parameters. The parameter below is just an example, and it shouldn't be used in production without knowledge. It is highly recommended that you read the PostgreSQL JDBC driver documentation in order to use it.
-      #JDBC_PARAMS: "ssl=true"
+    depends_on:
+      - mysql
+    command: start-dev
+    healthcheck:
+      test: "curl -f http://localhost:8080/admin || exit 1"
 volumes:
   postgres:
     driver: local

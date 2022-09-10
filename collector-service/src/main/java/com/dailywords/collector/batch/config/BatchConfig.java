@@ -59,7 +59,7 @@ public class BatchConfig extends QuartzJobBean {
                 .template(mongoTemplate)
                 .jsonQuery("{ }")
                 .sorts(new HashMap<>())
-                .pageSize(50)
+                .pageSize(10)
                 .targetType(RandomWord.class)
                 .build();
     }
@@ -89,7 +89,7 @@ public class BatchConfig extends QuartzJobBean {
     @Bean
     public Step fetchRandomWordItemStep() {
         return stepBuilderFactory.get("fetchRandomWordItemStep")
-                .<RandomWord, RandomWord>chunk(50)
+                .<RandomWord, RandomWord>chunk(10)
                 .reader(mongoItemReader())
 //                .processor(randomWordItemFilteringProcessor())
                 .writer(kafkaItemWriter())
