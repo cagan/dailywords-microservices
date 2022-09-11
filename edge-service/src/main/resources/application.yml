@@ -4,15 +4,18 @@ server:
 spring:
   application:
     name: edge-service
-
   security:
     oauth2:
-      client:
-        registration:
-          keycloak:
-            client-id: edge-service
-            client-secret: polar-keycloak-secret
-            scope: openid
-        provider:
-          keycloak:
-            issuer-uri: ${KEYCLOAK_URL:http://localhost:8080}/auth/realms/daily-words
+      resourceserver:
+        jwt:
+          issuer-uri: http://127.0.0.1:8080/realms/daily-words
+  cloud:
+    gateway:
+      default-filters:
+        - SaveSession
+#        - TokenRelay
+      routes:
+        - id: resource-server-route
+          uri: ${RESOURCE_SERVER_URL:http://localhost:10003}
+          predicates:
+            - Path=/api/v1/words/**

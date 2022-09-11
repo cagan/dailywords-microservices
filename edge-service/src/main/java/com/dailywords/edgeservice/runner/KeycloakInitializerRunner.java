@@ -3,7 +3,6 @@ package com.dailywords.edgeservice.runner;
 
 import com.dailywords.edgeservice.config.WebSecurityConfig;
 import lombok.RequiredArgsConstructor;
-import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
@@ -26,8 +25,8 @@ public class KeycloakInitializerRunner implements CommandLineRunner {
     private static final String EDGE_SERVICE_REDIRECT_URL = "http://localhost:10002/*";
     private static final List<UserPass> EDGE_SERVICE_USERS = Arrays.asList(
             new UserPass("admin", "admin"),
-            new UserPass("user", "user"));
-
+            new UserPass("user", "user")
+    );
     private final Keycloak keycloakAdmin;
 
     @Override
